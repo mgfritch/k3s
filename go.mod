@@ -64,7 +64,6 @@ replace (
 	k8s.io/kubernetes => github.com/k3s-io/kubernetes v1.36.3-k3s1
 	k8s.io/metrics => github.com/k3s-io/kubernetes/staging/src/k8s.io/metrics v1.36.3-k3s1
 	k8s.io/mount-utils => github.com/k3s-io/kubernetes/staging/src/k8s.io/mount-utils v1.36.3-k3s1
-	k8s.io/node-api => github.com/k3s-io/kubernetes/staging/src/k8s.io/node-api v1.36.2-k3s1
 	k8s.io/pod-security-admission => github.com/k3s-io/kubernetes/staging/src/k8s.io/pod-security-admission v1.36.3-k3s1
 	k8s.io/sample-apiserver => github.com/k3s-io/kubernetes/staging/src/k8s.io/sample-apiserver v1.36.3-k3s1
 	k8s.io/sample-cli-plugin => github.com/k3s-io/kubernetes/staging/src/k8s.io/sample-cli-plugin v1.36.3-k3s1
