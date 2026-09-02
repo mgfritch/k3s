@@ -1,6 +1,6 @@
 module github.com/k3s-io/k3s
 
-go 1.26.7
+go 1.26.5
 
 replace (
 	github.com/Microsoft/hcsshim => github.com/Microsoft/hcsshim v0.15.0-rc.1
@@ -155,15 +155,15 @@ require (
 	golang.org/x/sys v0.47.0
 	google.golang.org/grpc v1.83.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.36.0
-	k8s.io/apiextensions-apiserver v0.36.0
-	k8s.io/apimachinery v0.36.0
-	k8s.io/apiserver v0.36.0
+	k8s.io/api v0.35.8
+	k8s.io/apiextensions-apiserver v0.35.8
+	k8s.io/apimachinery v0.35.8
+	k8s.io/apiserver v0.35.8
 	k8s.io/cli-runtime v0.35.2
-	k8s.io/client-go v0.36.0
+	k8s.io/client-go v0.35.8
 	k8s.io/cloud-provider v0.35.2
 	k8s.io/cluster-bootstrap v0.35.2
-	k8s.io/component-base v0.36.0
+	k8s.io/component-base v0.35.8
 	k8s.io/component-helpers v0.35.2
 	k8s.io/cri-api v0.35.8
 	k8s.io/cri-client v0.35.8
