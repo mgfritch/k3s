@@ -26,7 +26,7 @@ var _ = Describe("Verify Secrets Encryption Rotation", Ordered, func() {
 	Context("Setup Cluster", func() {
 		It("should provision servers and agents", func() {
 			var err error
-			tc, err = docker.NewTestConfig("rancher/systemd-node")
+			tc, err = docker.NewTestConfig(GinkgoTB(), "rancher/systemd-node")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(tc.ProvisionServers(*serverCount)).To(Succeed())
 			Eventually(func() error {
@@ -88,7 +88,9 @@ var _ = Describe("Verify Secrets Encryption Rotation", Ordered, func() {
 					cmd := "k3s secrets-encrypt status"
 					res, err := node.RunCmdOnNode(cmd)
 					g.Expect(err).NotTo(HaveOccurred(), res)
-					g.Expect(res).Should(ContainSubstring("Server Encryption Hashes: hash does not match"))
+					if *serverCount > 1 {
+						g.Expect(res).Should(ContainSubstring("Server Encryption Hashes: hash does not match"))
+					}
 					if i == 0 {
 						g.Expect(res).Should(ContainSubstring("Current Rotation Stage: reencrypt_finished"))
 					} else {
@@ -201,8 +203,12 @@ var _ = Describe("Verify Secrets Encryption Rotation", Ordered, func() {
 		})
 		It("Restarts K3s servers", func() {
 			Expect(docker.RestartCluster(tc.Servers)).To(Succeed())
+			// Wait until we can access the cluster again.
+			cmd := "k3s secrets-encrypt status"
+			Eventually(func() (string, error) {
+				return tc.Servers[0].RunCmdOnNode(cmd)
+			}, "180s", "5s").Should(ContainSubstring("Encryption Status: Enabled"))
 		})
-
 		It("Rotates the Secrets-Encryption Keys, switching to new key type", func() {
 			cmd := "k3s secrets-encrypt rotate-keys"
 			res, err := tc.Servers[0].RunCmdOnNode(cmd)
@@ -212,7 +218,9 @@ var _ = Describe("Verify Secrets Encryption Rotation", Ordered, func() {
 					cmd := "k3s secrets-encrypt status"
 					res, err := node.RunCmdOnNode(cmd)
 					g.Expect(err).NotTo(HaveOccurred(), res)
-					g.Expect(res).Should(ContainSubstring("Server Encryption Hashes: hash does not match"))
+					if *serverCount > 1 {
+						g.Expect(res).Should(ContainSubstring("Server Encryption Hashes: hash does not match"))
+					}
 					if i == 0 {
 						g.Expect(res).Should(ContainSubstring("XSalsa20-POLY1305"))
 					} else {
