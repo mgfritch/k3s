@@ -7,7 +7,7 @@ github:
   repo: "TARGET_REPO"
   org: "TARGET_ORG"
 k3s:
-  org: "k3s-io"
+  org: "mgfritch"
   repo: "k3s"
 klipper_helm:
   org: "k3s-io"
