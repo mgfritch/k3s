@@ -51,7 +51,7 @@ var _ = Describe("Upgrade Tests", Ordered, func() {
 		})
 		It("should setup environment", func() {
 			var err error
-			tc, err = docker.NewTestConfig("rancher/k3s:" + latestVersion)
+			tc, err = docker.NewTestConfig(GinkgoTB(), "rancher/k3s:" + latestVersion)
 			testID := filepath.Base(tc.TestDir)
 			Expect(err).NotTo(HaveOccurred())
 			for i := 0; i < numServers; i++ {
@@ -146,7 +146,7 @@ var _ = Describe("Upgrade Tests", Ordered, func() {
 					return tests.RunCommand(cmd)
 				}, "240s", "5s").Should(ContainSubstring("test-loadbalancer"))
 
-				cmd = "curl -m 5 -s -f http://" + node.IP + ":" + port + "/ip"
+				cmd = "curl -m 5 -s -f http://" + node.IP + ":" + port + "/cgi-bin/ip"
 				Eventually(func() (string, error) {
 					return tests.RunCommand(cmd)
 				}, "240s", "5s").Should(ContainSubstring("10.42"), "failed cmd: "+cmd)
@@ -288,7 +288,7 @@ var _ = Describe("Upgrade Tests", Ordered, func() {
 				port, err := tests.RunCommand(cmd)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(func() (string, error) {
-					cmd := "curl -m 5 -s -f http://" + node.IP + ":" + port + "/ip"
+					cmd := "curl -m 5 -s -f http://" + node.IP + ":" + port + "/cgi-bin/ip"
 					return tests.RunCommand(cmd)
 				}, "240s", "5s").Should(ContainSubstring("10.42"))
 

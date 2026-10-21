@@ -66,11 +66,17 @@ var (
 	cronLogger = cron.VerbosePrintfLogger(logrus.StandardLogger())
 )
 
+// defaultSnapshotPath returns the directory snapshots are stored in when no
+// snapshot directory has been configured.
+func defaultSnapshotPath(c *config.Control) string {
+	return filepath.Join(c.DataDir, "db", "snapshots")
+}
+
 // snapshotDir ensures that the snapshot directory exists, and then returns its path.
 // Only the default snapshot directory will be created; user-specified non-default
 // snapshot directories must already exist.
 func snapshotDir(config *config.Control, create bool) (string, error) {
-	defaultSnapshotDir := filepath.Join(config.DataDir, "db", "snapshots")
+	defaultSnapshotDir := defaultSnapshotPath(config)
 	snapshotDir := config.EtcdSnapshotDir
 
 	if snapshotDir == "" {
@@ -154,9 +160,8 @@ func (e *ETCD) compressSnapshot(snapshotDir, snapshotFilename string, mtime time
 
 // decompressSnapshot decompresses the given snapshot and provides the caller
 // with the full path to the uncompressed snapshot.
-func (e *ETCD) decompressSnapshot(snapshotDir, snapshotFilename string) (unzipPath string, err error) {
-	logrus.Info("Decompressing etcd snapshot file: " + snapshotFilename)
-	snapshotPath := filepath.Join(snapshotDir, snapshotFilename)
+func (e *ETCD) decompressSnapshot(snapshotPath string) (unzipPath string, err error) {
+	logrus.Info("Decompressing etcd snapshot file: " + filepath.Base(snapshotPath))
 	unzipPath = strings.TrimSuffix(snapshotPath, snapshot.CompressedExtension)
 
 	defer func() {

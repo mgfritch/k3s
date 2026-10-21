@@ -132,7 +132,7 @@ func Request(path string, info *clientaccess.Info, requester HTTPRequester) ([]b
 		return nil, err
 	}
 	u.Path = path
-	return requester(u.String(), clientaccess.GetHTTPClient(info.CACerts, info.CertFile, info.KeyFile), info.Username, info.Password, info.Token())
+	return requester(u.String(), clientaccess.GetHTTPClient(info.CACerts, info.CAHash, info.CertFile, info.KeyFile), info.Username, info.Password, info.Token())
 }
 
 func getNodeNamedCrt(nodeName string, nodeIPs []net.IP, nodePasswordFile string, csr []byte) HTTPRequester {
@@ -453,7 +453,7 @@ func get(ctx context.Context, envInfo *cmds.Agent, proxy proxy.Proxy) (*config.N
 		return nil, errors.WithMessage(err, "failed to retrieve configuration from server")
 	}
 
-	nodeName, nodeIPs, err := util.GetHostnameAndIPs(envInfo.NodeName, envInfo.NodeIP.Value())
+	nodeName, nodeIPs, err := util.GetHostnameAndIPs(ctx, envInfo.NodeName, envInfo.NodeIP.Value())
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get node name and addresses")
 	}

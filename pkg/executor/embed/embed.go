@@ -91,7 +91,7 @@ func New(ctx context.Context, cfg *cmds.Agent) (*Embedded, error) {
 		}
 
 		// Pass ipv4, ipv6 or both depending on nodeIPs mode
-		_, nodeIPs, err := util.GetHostnameAndIPs(cfg.NodeName, util.SplitStringSlice(cfg.NodeIP.Value()))
+		_, nodeIPs, err := util.GetHostnameAndIPs(ctx, cfg.NodeName, util.SplitStringSlice(cfg.NodeIP.Value()))
 		if err != nil {
 			return nil, err
 		}
@@ -181,6 +181,7 @@ func (e *Embedded) Bootstrap(ctx context.Context, nodeConfig *daemonconfig.Node,
 			nodeConfig.Flannel.ConfFile = cfg.FlannelConf
 			nodeConfig.Flannel.ConfOverride = true
 		}
+		nodeConfig.Flannel.CNIConfFile = cfg.FlannelCniConfFile
 		nodeConfig.AgentConfig.CNIBinDir = filepath.Dir(hostLocal)
 		nodeConfig.AgentConfig.CNIConfDir = filepath.Join(cfg.DataDir, "agent", "etc", "cni", "net.d")
 
