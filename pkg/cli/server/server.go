@@ -41,6 +41,7 @@ import (
 	"github.com/urfave/cli/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilnet "k8s.io/apimachinery/pkg/util/net"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeapiserverflag "k8s.io/component-base/cli/flag"
 	"k8s.io/klog/v2"
@@ -209,6 +210,31 @@ func run(app *cli.Context, cfg *cmds.Server, leaderControllers server.CustomCont
 		serverConfig.ControlConfig.EtcdSnapshotName = cfg.EtcdSnapshotName
 		serverConfig.ControlConfig.EtcdSnapshotCron = cfg.EtcdSnapshotCron
 		serverConfig.ControlConfig.EtcdSnapshotDir = cfg.EtcdSnapshotDir
+
+		validRestrictions := sets.New(
+			"snapshot-dir",
+			"s3-endpoint",
+			"s3-bucket",
+			"s3-folder",
+			"s3-proxy",
+			"all",
+		)
+		var processedRestrictions []string
+		hasAll := false
+		for _, r := range util.SplitStringSlice(cfg.EtcdSnapshotRestrictions.Value()) {
+			if !validRestrictions.Has(r) {
+				return fmt.Errorf("invalid value for --etcd-snapshot-restrictions: %s\nvalid values are: %s", r, strings.Join(sets.List(validRestrictions), ", "))
+			}
+			if r == "all" {
+				hasAll = true
+			}
+			processedRestrictions = append(processedRestrictions, r)
+		}
+		if hasAll {
+			serverConfig.ControlConfig.EtcdSnapshotRestrictions = []string{"all"}
+		} else {
+			serverConfig.ControlConfig.EtcdSnapshotRestrictions = processedRestrictions
+		}
 		serverConfig.ControlConfig.EtcdSnapshotReconcile = metav1.Duration{Duration: cfg.EtcdSnapshotReconcile}
 		serverConfig.ControlConfig.EtcdSnapshotRetention = cfg.EtcdSnapshotRetention
 		if cfg.EtcdS3 {
@@ -291,7 +317,7 @@ func run(app *cli.Context, cfg *cmds.Server, leaderControllers server.CustomCont
 	// Ensure that we add the localhost name/ip and node name/ip to the SAN list. This list is shared by the
 	// certs for the supervisor, kube-apiserver cert, and etcd. DNS entries for the in-cluster kubernetes
 	// service endpoint are added later when the certificates are created.
-	nodeName, nodeIPs, err := util.GetHostnameAndIPs(cmds.AgentConfig.NodeName, cmds.AgentConfig.NodeIP.Value())
+	nodeName, nodeIPs, err := util.GetHostnameAndIPs(ctx, cmds.AgentConfig.NodeName, cmds.AgentConfig.NodeIP.Value())
 	if err != nil {
 		return err
 	}

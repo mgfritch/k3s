@@ -55,7 +55,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -175,14 +174,14 @@ func (e *ETCD) EndpointName() string {
 
 // SetControlConfig passes the cluster config into the etcd datastore. This is necessary
 // because the config may not yet be fully built at the time the Driver instance is registered.
-func (e *ETCD) SetControlConfig(config *config.Control) error {
+func (e *ETCD) SetControlConfig(ctx context.Context, config *config.Control) error {
 	if e.config != nil {
 		return errors.New("control config already set")
 	}
 
 	e.config = config
 
-	address, err := getAdvertiseAddress(e.config.PrivateIP)
+	address, err := getAdvertiseAddress(ctx, e.config.PrivateIP)
 	if err != nil {
 		return err
 	}
@@ -880,11 +879,13 @@ func toTLSConfig(runtime *config.ControlRuntime) (*tls.Config, error) {
 	}, nil
 }
 
-// getAdvertiseAddress returns the IP address best suited for advertising to clients
-func getAdvertiseAddress(advertiseIP string) (string, error) {
+// getAdvertiseAddress returns the IP address best suited for advertising to clients.
+// When no advertise IP is configured, it uses ChooseHostInterfaceWithContext to
+// wait for a default network route to become available during startup.
+func getAdvertiseAddress(ctx context.Context, advertiseIP string) (string, error) {
 	ip := advertiseIP
 	if ip == "" {
-		ipAddr, err := utilnet.ChooseHostInterface()
+		ipAddr, err := util.ChooseHostInterfaceWithContext(ctx)
 		if err != nil {
 			return "", err
 		}
@@ -1460,7 +1461,7 @@ func ClientURLs(ctx context.Context, clientAccessInfo *clientaccess.Info, selfIP
 	var memberList Members
 
 	// find the address advertised for our own client URL, so that we don't connect to ourselves
-	ip, err := getAdvertiseAddress(selfIP)
+	ip, err := getAdvertiseAddress(ctx, selfIP)
 	if err != nil {
 		return nil, memberList, err
 	}
@@ -1526,21 +1527,9 @@ func (e *ETCD) Restore(ctx context.Context) error {
 		return err
 	}
 
-	var restorePath string
-	if strings.HasSuffix(e.config.ClusterResetRestorePath, snapshot.CompressedExtension) {
-		dir, err := snapshotDir(e.config, true)
-		if err != nil {
-			return errors.WithMessage(err, "failed to get the snapshot dir")
-		}
-
-		decompressSnapshot, err := e.decompressSnapshot(dir, e.config.ClusterResetRestorePath)
-		if err != nil {
-			return err
-		}
-
-		restorePath = decompressSnapshot
-	} else {
-		restorePath = e.config.ClusterResetRestorePath
+	restorePath, err := e.restorePath()
+	if err != nil {
+		return err
 	}
 
 	// move the data directory to a temp path
@@ -1557,6 +1546,16 @@ func (e *ETCD) Restore(ctx context.Context) error {
 		PeerURLs:       []string{e.peerURL()},
 		InitialCluster: e.name + "=" + e.peerURL(),
 	})
+}
+
+// restorePath returns the path of the snapshot file to restore from.
+// Compressed snapshots are decompressed alongside the archive and the path to
+// the decompressed path is returned then (or an error if decompression fails).
+func (e *ETCD) restorePath() (string, error) {
+	if !strings.HasSuffix(e.config.ClusterResetRestorePath, snapshot.CompressedExtension) {
+		return e.config.ClusterResetRestorePath, nil
+	}
+	return e.decompressSnapshot(e.config.ClusterResetRestorePath)
 }
 
 // backupDirWithRetention will move the dir to a backup dir
@@ -1658,6 +1657,16 @@ func (e *ETCD) GetMembersClientURLs(ctx context.Context) ([]string, error) {
 func (e *ETCD) RemoveSelf(ctx context.Context) error {
 	if e.client == nil {
 		if err := e.startClient(ctx); err != nil {
+			return err
+		}
+	}
+
+	// the member name is not loaded when etcd is disabled, so read it from the
+	// name file that was left behind if this node previously ran etcd
+	if e.name == "" {
+		if data, err := os.ReadFile(nameFile(e.config)); err == nil {
+			e.name = string(data)
+		} else if !os.IsNotExist(err) {
 			return err
 		}
 	}
